@@ -228,56 +228,103 @@ Sprite.prototype.analyzeCollision = function(sprite, engine){
 	
 	var analysis = {};
 	
+	var intersectBox = {width: 0, height: 0};
 	
-	if( this._dx * sprite._dx < 0 ){
-		// Approaching eachother horizontally
-		analysis.headOn = true;
-		if( this._dx < 0 ){
-			// Collision has occured on the left side of this
-			//console.log('left');
-			analysis.direction = 4;
+	var getIntersectDimension = function(pos1, pos2, length1, length2){
+		if( pos1 > pos2 ){
+			if( pos1 + length1 > pos2 + length2 ){
+				return (pos2 + length2) - pos1;
+			}else{
+				// Sprite completely overlaps this
+				return length1;
+			}
+		}else if( pos1 <= pos2 && pos1 + length1 >= pos2 + length2 ){
+			// sprite is between vertical boundaries of this
+			return length2;
 		}else{
-			// Collision has occured on the right side of this
-			//console.log('right');
-			analysis.direction = 2;
+			// intersection occurs on the right
+			return (pos1 + length1) - sprite._x;
 		}
-		
-	}else if( this._dx * sprite._dx > 0 ){
-		// Same direction
-		if( this._dx > sprite._dx ){
-			// this has overtaken sprite
-			analysis.overTake = {
-				front: sprite,
-				back: this
-			};
-			
-			if( this._dx < 0 ){
+	}
+	
+	
+	intersectBox.width = getIntersectDimension(this._x, sprite._x, this._width, sprite._width);
+	intersectBox.height = getIntersectDimension(this._y, sprite._y, this._height, sprite._height);
+	
+	
+	var analyzeDirection = function(d1, d2){
+		if( d1 * d2 < 0 ){
+			// Approaching eachother horizontally
+			analysis.headOn = true;
+			if( d1 < 0 ){
+				// Collision has occured on the left side of this
 				//console.log('left');
 				analysis.direction = 4;
 			}else{
+				// Collision has occured on the right side of this
 				//console.log('right');
 				analysis.direction = 2;
 			}
-		}else if ( this._dx < sprite._dx ){
-			// sprite has overtaking this
-			analysis.overTake = {
-					front: this,
-					back: sprite
+			
+		}else if( d1 * d2 > 0 ){
+			// Same direction
+			if( d1 > d2 ){
+				// this has overtaken sprite
+				analysis.overTake = {
+					front: sprite,
+					back: this
 				};
-			
-			if( this._dx < 0 ){
-				//console.log('right');
-				analysis.direction = 2;
+				
+				if( d1 < 0 ){
+					//console.log('left');
+					analysis.direction = 4;
+				}else{
+					//console.log('right');
+					analysis.direction = 2;
+				}
+			}else if ( d1 < d2 ){
+				// sprite has overtaking this
+				analysis.overTake = {
+						front: this,
+						back: sprite
+					};
+				
+				if( d1 < 0 ){
+					//console.log('right');
+					analysis.direction = 2;
+				}else{
+					//console.log('left');
+					analysis.direction = 4;
+				}
 			}else{
-				//console.log('left');
-				analysis.direction = 4;
+				// same speed (impossible cuz no collision)
 			}
+			
 		}else{
-			// same speed (impossible cuz no collision)
+			// one or both are standing still
 		}
 		
+		
+		if( vertical ){
+			if( analysis.direction == 2 ){
+				analysis.direciton = 3;
+			}else{
+				analysis.direction = 1;
+			}
+		}
+	}
+	
+	//console.log(intersectBox.width + " " + intersectBox.height);
+		analysis.direction = 1;
+	if( intersectBox.width > intersectBox.height ){
+		// vertical collision
+		var vertical = true;
+		//console.log('vertical');
+		analyzeDirection(this._dy, sprite._dy);
 	}else{
-		// one or both are standing still
+		// horizontal
+		//console.log('horizontal');
+		analyzeDirection(this._dx, sprite._dx);
 	}
 	
 	
@@ -319,6 +366,7 @@ Sprite.prototype.handleCollision = function(collisionInfo, engine){
 		
 		switch(this._physics._options.collision){
 		case collisionTypes.BOUNCE:
+			
 			if( collisionInfo.direction == collisionDirections.RIGHT || collisionInfo.direction == collisionDirections.LEFT ){
 				// Collision was horizontal
 				if( !this._physics._options.ignoreGravity && engine._options.gravity ){
@@ -355,8 +403,32 @@ Sprite.prototype.handleCollision = function(collisionInfo, engine){
 				}
 				
 				if( typeof(collisionInfo.object) == 'object' ){
+					var sprite = collisionInfo.object;
+					
 					this._dy += collisionInfo.object._dy;
+					if( collisionInfo.analysis.headOn ){
+						
+						// Prevent the object from remaining inside the other object
+						
+						if( collisionInfo.direction == collisionDirections.DOWN ){
+							this._y = sprite._y + sprite._height + 1;
+							//collisionInfo.object._x = this._x + this._width + 1;
+						}else{
+							//collisionInfo.object._x = this._x - 1;
+							this._y = sprite._y - this._height - 1;
+						}
+					}
 				}
+				
+				/*if( !this._physics._options.ignoreGravity && engine._options.gravity ){
+					this._dy *= this._physics._options.bounceEfficiency * -1;
+				}else{
+					this._dy *= -1;
+				}
+				
+				if( typeof(collisionInfo.object) == 'object' ){
+					this._dy += collisionInfo.object._dy;
+				}*/
 			}
 			break;
 		case collisionTypes.STOP:
@@ -418,7 +490,7 @@ Timer.prototype.start = function(callback){
 	// every .034 seconds = 34 miliseconds;
 	this._interval = 1/this._fps; // ms
 	this._interval = Math.floor(this._interval * 1000);
-	console.log(this._interval);
+	//console.log(this._interval);
 	this._callback = callback;
 	
 	this.doFrame = function(obj){
