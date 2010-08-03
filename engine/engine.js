@@ -232,6 +232,7 @@ Sprite.prototype.analyzeCollision = function(sprite, engine){
 	
 	var getIntersectDimension = function(pos1, pos2, length1, length2){
 		if( pos1 > pos2 ){
+			console.log('first');
 			if( pos1 + length1 > pos2 + length2 ){
 				return (pos2 + length2) - pos1;
 			}else{
@@ -239,11 +240,13 @@ Sprite.prototype.analyzeCollision = function(sprite, engine){
 				return length1;
 			}
 		}else if( pos1 <= pos2 && pos1 + length1 >= pos2 + length2 ){
+			console.log('second');
 			// sprite is between vertical boundaries of this
 			return length2;
 		}else{
+			console.log('third');
 			// intersection occurs on the right
-			return (pos1 + length1) - sprite._x;
+			return (pos1 + length1) - pos2;
 		}
 	}
 	
@@ -306,6 +309,7 @@ Sprite.prototype.analyzeCollision = function(sprite, engine){
 		
 		
 		if( vertical ){
+			console.log('vertical');
 			if( analysis.direction == 2 ){
 				analysis.direciton = 3;
 			}else{
@@ -314,7 +318,7 @@ Sprite.prototype.analyzeCollision = function(sprite, engine){
 		}
 	}
 	
-	//console.log(intersectBox.width + " " + intersectBox.height);
+	console.log(intersectBox.width + " " + intersectBox.height);
 		analysis.direction = 1;
 	if( intersectBox.width > intersectBox.height ){
 		// vertical collision
@@ -366,6 +370,8 @@ Sprite.prototype.handleCollision = function(collisionInfo, engine){
 		
 		switch(this._physics._options.collision){
 		case collisionTypes.BOUNCE:
+			
+			console.log(collisionInfo.direction);
 			
 			if( collisionInfo.direction == collisionDirections.RIGHT || collisionInfo.direction == collisionDirections.LEFT ){
 				// Collision was horizontal
